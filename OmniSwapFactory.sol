@@ -297,7 +297,7 @@ contract SwapERC20 is ISwapERC20 {
     }
 
     function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s)  external override {
-        require(deadline >= block.timestamp, 'DIDSwap: EXPIRED');
+        require(deadline >= block.timestamp, 'OMNISWAP: EXPIRED');
         bytes32 digest = keccak256(
             abi.encodePacked(
                 '\x19\x01',
@@ -306,7 +306,7 @@ contract SwapERC20 is ISwapERC20 {
             )
         );
         address recoveredAddress = ecrecover(digest, v, r, s);
-        require(recoveredAddress != address(0) && recoveredAddress == owner, 'DIDSwap: INVALID_SIGNATURE');
+        require(recoveredAddress != address(0) && recoveredAddress == owner, 'OMNISWAP: INVALID_SIGNATURE');
         _approve(owner, spender, value);
     }
 }
@@ -391,7 +391,7 @@ contract SwapPair is ISwapPair, SwapERC20 {
 
     uint private unlocked = 1;
     modifier lock() {
-        require(unlocked == 1, 'DIDSwap: LOCKED');
+        require(unlocked == 1, 'OMNISWAP: LOCKED');
         unlocked = 0;
         _;
         unlocked = 1;
@@ -405,7 +405,7 @@ contract SwapPair is ISwapPair, SwapERC20 {
 
     function _safeTransfer(address token, address to, uint value) private {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(SELECTOR, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), 'DIDSwap: TRANSFER_FAILED');
+        require(success && (data.length == 0 || abi.decode(data, (bool))), 'OMNISWAP: TRANSFER_FAILED');
     }
 
     event SwapLog(
@@ -426,14 +426,14 @@ contract SwapPair is ISwapPair, SwapERC20 {
 
     // called once by the factory at time of deployment
     function initialize(address _token0, address _token1) external override {
-        require(msg.sender == factory, 'DIDSwap: FORBIDDEN'); // sufficient check
+        require(msg.sender == factory, 'OMNISWAP: FORBIDDEN'); // sufficient check
         token0 = _token0;
         token1 = _token1;
     }
 
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
-        require(balance0 <= ~uint112(0) && balance1 <= ~uint112(0), 'DIDSwap: OVERFLOW');
+        require(balance0 <= ~uint112(0) && balance1 <= ~uint112(0), 'OMNISWAP: OVERFLOW');
         uint32 blockTimestamp = uint32(block.timestamp % 2**32);
         uint32 timeElapsed = blockTimestamp - blockTimestampLast; // overflow is desired
         if (timeElapsed > 0 && _reserve0 != 0 && _reserve1 != 0) {
@@ -485,7 +485,7 @@ contract SwapPair is ISwapPair, SwapERC20 {
             liquidity = Math.min(amount0.mul(_totalSupply) / _reserve0, amount1.mul(_totalSupply) / _reserve1);
         }
         _mint(to, liquidity);
-        require(liquidity > 0, 'DIDSwap: INSUFFICIENT_LIQUIDITY_MINTED');
+        require(liquidity > 0, 'OMNISWAP: INSUFFICIENT_LIQUIDITY_MINTED');
 
         _update(balance0, balance1, _reserve0, _reserve1);
         if (feeOn) kLast = uint(reserve0).mul(reserve1); // reserve0 and reserve1 are up-to-date
@@ -505,7 +505,7 @@ contract SwapPair is ISwapPair, SwapERC20 {
         uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
-        require(amount0 > 0 && amount1 > 0, 'DIDSwap: INSUFFICIENT_LIQUIDITY_BURNED');
+        require(amount0 > 0 && amount1 > 0, 'OMNISWAP: INSUFFICIENT_LIQUIDITY_BURNED');
         _burn(address(this), liquidity);
         _safeTransfer(_token0, to, amount0);
         _safeTransfer(_token1, to, amount1);
@@ -519,17 +519,17 @@ contract SwapPair is ISwapPair, SwapERC20 {
 
     // this low-level function should be called from a contract which performs important safety checks
     function swap(uint amount0Out, uint amount1Out, address to, bytes calldata data) external override lock {
-        require(msg.sender == ISwapFactory(factory).router(), 'DIDSwap: FORBIDDEN'); // sufficient check
-        require(amount0Out > 0 || amount1Out > 0, 'DIDSwap: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(msg.sender == ISwapFactory(factory).router(), 'OMNISWAP: FORBIDDEN'); // sufficient check
+        require(amount0Out > 0 || amount1Out > 0, 'OMNISWAP: INSUFFICIENT_OUTPUT_AMOUNT');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves(); // gas savings
-        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(amount0Out < _reserve0 && amount1Out < _reserve1, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
 
         uint balance0;
         uint balance1;
         { // scope for _token{0,1}, avoids stack too deep errors
         address _token0 = token0;
         address _token1 = token1;
-        require(to != _token0 && to != _token1, 'DIDSwap: INVALID_TO');
+        require(to != _token0 && to != _token1, 'OMNISWAP: INVALID_TO');
         if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
         if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
         if (data.length > 0) ISwapCallee(to).swapCall(msg.sender, amount0Out, amount1Out, data);
@@ -538,11 +538,11 @@ contract SwapPair is ISwapPair, SwapERC20 {
         }
         uint amount0In = balance0 > _reserve0 - amount0Out ? balance0 - (_reserve0 - amount0Out) : 0;
         uint amount1In = balance1 > _reserve1 - amount1Out ? balance1 - (_reserve1 - amount1Out) : 0;
-        require(amount0In > 0 || amount1In > 0, 'DIDSwap: INSUFFICIENT_INPUT_AMOUNT');
+        require(amount0In > 0 || amount1In > 0, 'OMNISWAP: INSUFFICIENT_INPUT_AMOUNT');
         // { // scope for reserve{0,1}Adjusted, avoids stack too deep errors
         // uint balance0Adjusted = (balance0.mul(10000).sub(amount0In.mul(ISwapFactory(factory).swapFee())));
         // uint balance1Adjusted = (balance1.mul(10000).sub(amount1In.mul(ISwapFactory(factory).swapFee())));
-        // require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(10000**2), 'DIDSwap: K');
+        // require(balance0Adjusted.mul(balance1Adjusted) >= uint(_reserve0).mul(_reserve1).mul(10000**2), 'OMNISWAP: K');
         // }
 
         _update(balance0, balance1, _reserve0, _reserve1);
@@ -551,11 +551,11 @@ contract SwapPair is ISwapPair, SwapERC20 {
     }
 
     function burnToken(address token,uint amount) external override lock {
-        require(msg.sender == ISwapFactory(factory).router(), 'DIDSwap: FORBIDDEN'); // sufficient check
-        require(amount > 0, 'DIDSwap: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(msg.sender == ISwapFactory(factory).router(), 'OMNISWAP: FORBIDDEN'); // sufficient check
+        require(amount > 0, 'OMNISWAP: INSUFFICIENT_OUTPUT_AMOUNT');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves();
         uint balance = IERC20(token).balanceOf(address(this));
-        require(amount < balance, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(amount < balance, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
         _safeTransfer(token, deadAddress, amount); // optimistically transfer tokens
         uint balance0 = IERC20(token0).balanceOf(address(this));
         uint balance1 = IERC20(token1).balanceOf(address(this));
@@ -564,15 +564,15 @@ contract SwapPair is ISwapPair, SwapERC20 {
     }
 
     function distributeToken(address token, address[] memory feeAddressList, uint[] memory feeList) external override lock {
-        require(msg.sender == ISwapFactory(factory).router(), 'DIDSwap: FORBIDDEN'); // sufficient check
-        require(feeAddressList.length == feeList.length, 'DIDSwap: INVALID_LENGTH');
+        require(msg.sender == ISwapFactory(factory).router(), 'OMNISWAP: FORBIDDEN'); // sufficient check
+        require(feeAddressList.length == feeList.length, 'OMNISWAP: INVALID_LENGTH');
         (uint112 _reserve0, uint112 _reserve1,) = getReserves();
         uint totalFee = 0;
         for(uint i = 0; i < feeList.length; i++) {
             totalFee = totalFee.add(feeList[i]);
         }
         uint balance = IERC20(token).balanceOf(address(this));
-        require(totalFee < balance, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(totalFee < balance, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
         // _safeTransfer(token, address(0), totalFee); // optimistically transfer tokens
         for(uint i = 0; i < feeAddressList.length; i++) {
             _safeTransfer(token, feeAddressList[i], feeList[i]); // optimistically transfer tokens
@@ -710,10 +710,10 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
     }
 
     function createPair(address tokenA, address tokenB) external override returns (address pair) {
-        require(tokenA != tokenB, 'DIDSwap: IDENTICAL_ADDRESSES');
+        require(tokenA != tokenB, 'OMNISWAP: IDENTICAL_ADDRESSES');
         (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'DIDSwap: ZERO_ADDRESS');
-        require(getPair[token0][token1] == address(0), 'DIDSwap: PAIR_EXISTS'); // single check is sufficient   
+        require(token0 != address(0), 'OMNISWAP: ZERO_ADDRESS');
+        require(getPair[token0][token1] == address(0), 'OMNISWAP: PAIR_EXISTS'); // single check is sufficient   
         bytes memory bytecode = type(SwapPair).creationCode;
         bytes32 salt = keccak256(abi.encodePacked(token0, token1));
         assembly {
@@ -735,9 +735,9 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
     }
 
     function sortTokens(address tokenA, address tokenB) public pure override returns (address token0, address token1) {
-        require(tokenA != tokenB, 'DIDSwap: IDENTICAL_ADDRESSES');
+        require(tokenA != tokenB, 'OMNISWAP: IDENTICAL_ADDRESSES');
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        require(token0 != address(0), 'DIDSwap: ZERO_ADDRESS');
+        require(token0 != address(0), 'OMNISWAP: ZERO_ADDRESS');
     }
 
     function pairFor(address tokenA, address tokenB) public view override returns (address pair) {
@@ -759,15 +759,15 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
 
     // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
     function quote(uint amountA, uint reserveA, uint reserveB) external pure override returns (uint amountB) {
-        require(amountA > 0, 'DIDSwap: INSUFFICIENT_AMOUNT');
-        require(reserveA > 0 && reserveB > 0, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(amountA > 0, 'OMNISWAP: INSUFFICIENT_AMOUNT');
+        require(reserveA > 0 && reserveB > 0, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
         amountB = amountA * reserveB / reserveA;
     }
 
     // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
     function getAmountOut(uint amountIn, uint reserveIn, uint reserveOut) public view override returns (uint amountOut) {
-        require(amountIn > 0, 'DIDSwap: INSUFFICIENT_INPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(amountIn > 0, 'OMNISWAP: INSUFFICIENT_INPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
         uint amountInWithFee = amountIn * (FEE_RATE_BASE - swapFee);
         uint numerator = amountInWithFee * reserveOut;
         uint denominator = reserveIn * FEE_RATE_BASE + amountInWithFee;
@@ -776,8 +776,8 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
 
     // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
     function getAmountIn(uint amountOut, uint reserveIn, uint reserveOut) public view override returns (uint amountIn) {
-        require(amountOut > 0, 'DIDSwap: INSUFFICIENT_OUTPUT_AMOUNT');
-        require(reserveIn > 0 && reserveOut > 0, 'DIDSwap: INSUFFICIENT_LIQUIDITY');
+        require(amountOut > 0, 'OMNISWAP: INSUFFICIENT_OUTPUT_AMOUNT');
+        require(reserveIn > 0 && reserveOut > 0, 'OMNISWAP: INSUFFICIENT_LIQUIDITY');
         uint numerator = reserveIn * amountOut * FEE_RATE_BASE;
         uint denominator = (reserveOut - amountOut) * (FEE_RATE_BASE - swapFee);
         amountIn = (numerator / denominator) + 1;
@@ -785,7 +785,7 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
 
     // performs chained getAmountOut calculations on any number of pairs
     function getAmountsOut(uint amountIn, address[] memory path) public view override returns (uint[] memory amounts) {
-        require(path.length >= 2, 'DIDSwap: INVALID_PATH');
+        require(path.length >= 2, 'OMNISWAP: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[0] = amountIn;
         for (uint i; i < path.length - 1; i++) {
@@ -796,7 +796,7 @@ contract OmniSwapFactory is ISwapFactory, Ownable {
 
     // performs chained getAmountIn calculations on any number of pairs
     function getAmountsIn(uint amountOut, address[] memory path) public view override returns (uint[] memory amounts) {
-        require(path.length >= 2, 'DIDSwap: INVALID_PATH');
+        require(path.length >= 2, 'OMNISwap: INVALID_PATH');
         amounts = new uint[](path.length);
         amounts[amounts.length - 1] = amountOut;
         for (uint i = path.length - 1; i > 0; i--) {

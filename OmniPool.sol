@@ -696,826 +696,101 @@ library SafeERC20 {
 //     }
 // }
 
-// contract ECDSA {
+contract ECDSA {
 
-//    function splitSignature(bytes memory sig)
-//         internal
-//         pure
-//         returns (
-//             uint8,
-//             bytes32,
-//             bytes32
-//         )
-//     {
-//         require(sig.length == 65);
+   function splitSignature(bytes memory sig)
+        internal
+        pure
+        returns (
+            uint8,
+            bytes32,
+            bytes32
+        )
+    {
+        require(sig.length == 65);
 
-//         bytes32 r;
-//         bytes32 s;
-//         uint8 v;
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
 
-//         assembly {
-//             // first 32 bytes, after the length prefix
-//             r := mload(add(sig, 32))
-//             // second 32 bytes
-//             s := mload(add(sig, 64))
-//             // final byte (first byte of the next 32 bytes)
-//             v := byte(0, mload(add(sig, 96)))
-//         }
-//         return (v, r, s);
-//     }
-
-//     function recoverSigner(bytes32 message, bytes memory sig)
-//         internal
-//         pure
-//         returns (address)
-//     {
-//         uint8 v;
-//         bytes32 r;
-//         bytes32 s;
-//         (v, r, s) = splitSignature(sig);
-//         return ecrecover(message, v, r, s);
-//     }
-// }
-library EnumerableSet {
-    // To implement this library for multiple types with as little code
-    // repetition as possible, we write it in terms of a generic Set type with
-    // bytes32 values.
-    // The Set implementation uses private functions, and user-facing
-    // implementations (such as AddressSet) are just wrappers around the
-    // underlying Set.
-    // This means that we can only create new EnumerableSets for types that fit
-    // in bytes32.
-
-    struct Set {
-        // Storage of set values
-        bytes32[] _values;
-
-        // Position of the value in the `values` array, plus 1 because index 0
-        // means a value is not in the set.
-        mapping (bytes32 => uint256) _indexes;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function _add(Set storage set, bytes32 value) private returns (bool) {
-        if (!_contains(set, value)) {
-            set._values.push(value);
-            // The value is stored at length-1, but we add 1 to all indexes
-            // and use 0 as a sentinel value
-            set._indexes[value] = set._values.length;
-            return true;
-        } else {
-            return false;
+        assembly {
+            // first 32 bytes, after the length prefix
+            r := mload(add(sig, 32))
+            // second 32 bytes
+            s := mload(add(sig, 64))
+            // final byte (first byte of the next 32 bytes)
+            v := byte(0, mload(add(sig, 96)))
         }
+        return (v, r, s);
     }
 
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function _remove(Set storage set, bytes32 value) private returns (bool) {
-        // We read and store the value's index to prevent multiple reads from the same storage slot
-        uint256 valueIndex = set._indexes[value];
-
-        if (valueIndex != 0) { // Equivalent to contains(set, value)
-            // To delete an element from the _values array in O(1), we swap the element to delete with the last one in
-            // the array, and then remove the last element (sometimes called as 'swap and pop').
-            // This modifies the order of the array, as noted in {at}.
-
-            uint256 toDeleteIndex = valueIndex - 1;
-            uint256 lastIndex = set._values.length - 1;
-
-            // When the value to delete is the last one, the swap operation is unnecessary. However, since this occurs
-            // so rarely, we still do the swap anyway to avoid the gas cost of adding an 'if' statement.
-
-            bytes32 lastvalue = set._values[lastIndex];
-
-            // Move the last value to the index where the value to delete is
-            set._values[toDeleteIndex] = lastvalue;
-            // Update the index for the moved value
-            set._indexes[lastvalue] = toDeleteIndex + 1; // All indexes are 1-based
-
-            // Delete the slot where the moved value was stored
-            set._values.pop();
-
-            // Delete the index for the deleted slot
-            delete set._indexes[value];
-
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function _contains(Set storage set, bytes32 value) private view returns (bool) {
-        return set._indexes[value] != 0;
-    }
-
-    /**
-     * @dev Returns the number of values on the set. O(1).
-     */
-    function _length(Set storage set) private view returns (uint256) {
-        return set._values.length;
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function _at(Set storage set, uint256 index) private view returns (bytes32) {
-        require(set._values.length > index, "EnumerableSet: index out of bounds");
-        return set._values[index];
-    }
-
-    // Bytes32Set
-
-    struct Bytes32Set {
-        Set _inner;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function add(Bytes32Set storage set, bytes32 value) internal returns (bool) {
-        return _add(set._inner, value);
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function remove(Bytes32Set storage set, bytes32 value) internal returns (bool) {
-        return _remove(set._inner, value);
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function contains(Bytes32Set storage set, bytes32 value) internal view returns (bool) {
-        return _contains(set._inner, value);
-    }
-
-    /**
-     * @dev Returns the number of values in the set. O(1).
-     */
-    function length(Bytes32Set storage set) internal view returns (uint256) {
-        return _length(set._inner);
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function at(Bytes32Set storage set, uint256 index) internal view returns (bytes32) {
-        return _at(set._inner, index);
-    }
-
-    // AddressSet
-
-    struct AddressSet {
-        Set _inner;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function add(AddressSet storage set, address value) internal returns (bool) {
-        return _add(set._inner, bytes32(uint256(uint160(value))));
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function remove(AddressSet storage set, address value) internal returns (bool) {
-        return _remove(set._inner, bytes32(uint256(uint160(value))));
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function contains(AddressSet storage set, address value) internal view returns (bool) {
-        return _contains(set._inner, bytes32(uint256(uint160(value))));
-    }
-
-    /**
-     * @dev Returns the number of values in the set. O(1).
-     */
-    function length(AddressSet storage set) internal view returns (uint256) {
-        return _length(set._inner);
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function at(AddressSet storage set, uint256 index) internal view returns (address) {
-        return address(uint160(uint256(_at(set._inner, index))));
-    }
-
-
-    // UintSet
-
-    struct UintSet {
-        Set _inner;
-    }
-
-    /**
-     * @dev Add a value to a set. O(1).
-     *
-     * Returns true if the value was added to the set, that is if it was not
-     * already present.
-     */
-    function add(UintSet storage set, uint256 value) internal returns (bool) {
-        return _add(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Removes a value from a set. O(1).
-     *
-     * Returns true if the value was removed from the set, that is if it was
-     * present.
-     */
-    function remove(UintSet storage set, uint256 value) internal returns (bool) {
-        return _remove(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Returns true if the value is in the set. O(1).
-     */
-    function contains(UintSet storage set, uint256 value) internal view returns (bool) {
-        return _contains(set._inner, bytes32(value));
-    }
-
-    /**
-     * @dev Returns the number of values on the set. O(1).
-     */
-    function length(UintSet storage set) internal view returns (uint256) {
-        return _length(set._inner);
-    }
-
-   /**
-    * @dev Returns the value stored at position `index` in the set. O(1).
-    *
-    * Note that there are no guarantees on the ordering of values inside the
-    * array, and it may change when more values are added or removed.
-    *
-    * Requirements:
-    *
-    * - `index` must be strictly less than {length}.
-    */
-    function at(UintSet storage set, uint256 index) internal view returns (uint256) {
-        return uint256(_at(set._inner, index));
-    }
-}
-
-contract AdminRole {
-    using EnumerableSet for EnumerableSet.AddressSet;
- 
-    EnumerableSet.AddressSet private _admins;
-
-    event AdminAdded(address indexed account);
-    event AdminRemoved(address indexed account);
-
-    constructor() {
-        _addAdmin(msg.sender);
-    }
-
-    modifier onlyAdmin() {
-        require(
-            isAdmin(msg.sender),
-            "AdminRole: caller does not have the Admin role"
-        );
-        _;
-    }
-
-    function isAdmin(address account) public view returns (bool) {
-        return _admins.contains(account);
-    }
-
-    function allAdmins() public view returns (address[] memory admins) {
-        admins = new address[](_admins.length());
-        for (uint256 i = 0; i < _admins.length(); i++) {
-            admins[i] = _admins.at(i);
-        }
-    }
-
-    function addAdmin(address account) public onlyAdmin {
-        _addAdmin(account);
-    }
-
-    function removeAdmin(address account) public onlyAdmin {
-        _removeAdmin(account);
-    }
-
-    function renounceAdmin() public {
-        _removeAdmin(msg.sender);
-    }
-
-    function _addAdmin(address account) internal {
-        _admins.add(account);
-        emit AdminAdded(account);
-    }
-    
-    function _removeAdmin(address account) internal {
-        _admins.remove(account);
-        emit AdminRemoved(account);
-    }
-}
-
-library Math {
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-
-    /**
-     * @dev Returns the smallest of two numbers.
-     */
-    function min(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a < b ? a : b;
-    }
-
-    /**
-     * @dev Returns the average of two numbers. The result is rounded towards
-     * zero.
-     */
-    function average(uint256 a, uint256 b) internal pure returns (uint256) {
-        // (a + b) / 2 can overflow, so we distribute
-        return (a / 2) + (b / 2) + ((a % 2 + b % 2) / 2);
+    function recoverSigner(bytes32 message, bytes memory sig)
+        internal
+        pure
+        returns (address)
+    {
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        (v, r, s) = splitSignature(sig);
+        return ecrecover(message, v, r, s);
     }
 }
 
 
-interface IRelation {
-function Inviter(address addr) external view returns (address);
-function bindLv(address addr) external view returns (uint256);
-function vip(address addr) external view returns (uint256);
-function invStats(address addr) external view returns (bool);
-function BatchBind(address[] memory addr,address[] memory inv) external;
-function getDirectCard(address addr) external view returns (address);
-function getIndirectCard(address addr) external view returns (address);
-}
-
-
-
-contract OmniStakePool is AdminRole{
+contract OmniPool is ECDSA {
     using SafeMath for uint;
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
-    uint256 public dayId = 0;
-    uint256 public dayPower = 10**18;
-
 
     uint256 public constant FEE_RATE_BASE = 10000;
 
-    address public factory;
     address public stakeFactory;
-    address public router;
-    uint256 public period;
-    address public lpAddress;
-    uint256 public releaseRatio = 80;
-    uint256 private initHolderAmount;
-    address private initHolderAddress;
-    uint256 public starttime;
-    uint256 public checkTime;
-
-    uint256 public lpReleaseTime;
-    uint256 public rewardPeriod;
-    uint256 public nextReleaseTime;
-    uint256 public stakeNodeRatio;
-    uint256 public stakeFundRatio;
-    uint256 public stakeCommRatio;
-    address public fundAddress;
-    address public commAddress;
-    uint256 public releaseOperRatio;
-    uint256 public releaseFundRatio;
-    uint256 public releaseCommRatio;
-    uint256 public releaseBaseRatio = 5000;
-    address public fundAddr2;
-    address public commAddr2;
-    address public operAddr;
     address public baseToken;
     address public otherToken;
     address private _owner;
-    bool public flag;
-    // mapping(address => uint256) private nonce;
-    // mapping(bytes32 => bool) private orders;
+    mapping(address => uint256) private nonce;
+    mapping(bytes32 => bool) private orders;
 
-    mapping(address => mapping(uint256 => uint256)) public dailyPower;
-    mapping(address => mapping(uint256 => uint256)) public TPower;
-    mapping(address => mapping(uint256 => uint256)) public NPower;
-
-
-
-    uint private unlocked = 1;
-
-    modifier lock() {
-        require(unlocked == 1, 'Pool: LOCKED');
-        unlocked = 0;
-        _;
-        unlocked = 1;
-    }
 
     event Claim(address user, address token, uint amount, uint rType, uint timeout, uint time);
-    event Stake(address user, uint amount, uint time);
-    event Release(uint amount, uint time);
 
-    address public relation;
-    uint256 public constant DURATION = 1 days; //days
-    uint256 public initreward;
-    uint256 public periodFinish;
-    uint256 public rewardRate;
-    uint256 public lastUpdateTime;
-    uint256 public rewardPerTokenStored;
-    mapping(address => uint256) public userRewardPerTokenPaid;
-    mapping(address => uint256) public rewards;
-    mapping(address => uint256) public rewardClaimed;
-
-    event RewardAdded(uint256 reward);
-    event Staked(address indexed user, uint256 amount);
-    event Withdrawn(address indexed user, uint256 amount);
-    event RewardPaid(address indexed user, uint256 reward);
-
-    constructor(
-        uint256 starttime_
-    ) {
-        checkTime = starttime_;
-        starttime = starttime_;
-    }
-
-    modifier updateReward(address account) {
-        rewardPerTokenStored = rewardPerToken();
-        lastUpdateTime = lastTimeRewardApplicable();
-        if (account != address(0)) {
-            rewards[account] = earned(account);
-            userRewardPerTokenPaid[account] = rewardPerTokenStored;
-        }
+    modifier onlyOwner() {
+        require(_owner == msg.sender, "Pool: caller is not the owner");
         _;
     }
 
-    function lastTimeRewardApplicable() public view returns (uint256) {
-        return Math.min(block.timestamp, periodFinish);
+    constructor(address _factory) {
+        stakeFactory = _factory;
+        _owner = msg.sender;
     }
 
-    function rewardPerToken() public view returns (uint256) {
-        if (totalHashPower == 0) {
-            return rewardPerTokenStored;
-        }
 
-        return
-            rewardPerTokenStored.add(
-                lastTimeRewardApplicable()
-                    .sub(lastUpdateTime)
-                    .mul(rewardRate)
-                    .mul(1e18)
-                    .div(totalHashPower)
-            );
+    function setStakeFactory(address _factory) public onlyOwner{
+        stakeFactory = _factory;
     }
 
-    function earned(address account) public view returns (uint256) {
-        return
-            balanceOf(account)
-                .mul(rewardPerToken().sub(userRewardPerTokenPaid[account]))
-                .div(1e18)
-                .add(rewards[account]);
-    }
-
-    function getReward() public updateReward(msg.sender) checkStart {
-        uint256 reward = earned(msg.sender);
-        if (reward > 0) {
-            rewardClaimed[msg.sender] += reward;
-            rewards[msg.sender] = 0;
-            IERC20(otherToken).safeTransfer(msg.sender, reward);
-            emit RewardPaid(msg.sender, reward);
-        }
-    }
-
-    function helpGetReward(address addr_) external updateReward(addr_) checkStart onlyAdmin{
-        uint256 reward = earned(addr_);
-        if (reward > 0) {
-            rewardClaimed[addr_] += reward;
-            rewards[addr_] = 0;
-            IERC20(otherToken).safeTransfer(addr_, reward);
-            emit RewardPaid(addr_, reward);
-        }
-    }
-
-    modifier checkStart() {
-        require(block.timestamp >= starttime, "not start");
-        _;
-    }
-
-    function updateStartTime(uint256 starttime_) external onlyAdmin {
-        starttime = starttime_;
-    }
-
-    function updatePeriodFinish(uint256 time) external onlyAdmin {
-        periodFinish = time;
-    }
-
-    function _addReward(uint256 reward) internal
-        updateReward(address(0)) 
-    {
-        if (block.timestamp > starttime) {
-            if (block.timestamp >= periodFinish) {
-                rewardRate = reward.div(DURATION);
-            } else {
-                uint256 remaining = periodFinish.sub(block.timestamp);
-                uint256 leftover = remaining.mul(rewardRate);
-                rewardRate = reward.add(leftover).div(DURATION);
-            }
-            lastUpdateTime = block.timestamp;
-            periodFinish = block.timestamp.add(DURATION);
-            emit RewardAdded(reward);
+    function claim(uint256 _amount, uint256 _rType, uint256 _timeout, bytes memory signature) external {
+        // require(block.timestamp >= starttime, 'Pool: NOT START');
+        require(_amount > 0, 'Pool: claim amount must be greater than zero');
+        
+        require(_timeout >= block.timestamp, 'Pool: timeout');
+        uint256 nonce_ = ++nonce[msg.sender];
+        // 验证签名
+        bytes32 hash = keccak256(abi.encodePacked(
+            msg.sender, _amount, _rType, _timeout, nonce_
+        ));
+        require(!orders[hash], "Pool: hash expired");
+        require(IStakeFactory(stakeFactory).rewardSigner(recoverSigner(hash, signature)), "Pool: sign error");
+        orders[hash] = true;
+        if(_rType == 2) {
+            require(_amount <= IERC20(baseToken).balanceOf(address(this)), 'Pool: claim amount must be less than balance');
+            IERC20(baseToken).safeTransfer(msg.sender, _amount);
+            emit Claim(msg.sender, baseToken, _amount, _rType, _timeout, block.timestamp);
         } else {
-            initreward = initreward + reward;
-            rewardRate = initreward.div(DURATION);
-            lastUpdateTime = starttime;
-            periodFinish = starttime.add(DURATION);
-            emit RewardAdded(reward);
+            require(_amount <= IERC20(otherToken).balanceOf(address(this)), 'Pool: claim amount must be less than balance');
+            IERC20(otherToken).safeTransfer(msg.sender, _amount);
+            emit Claim(msg.sender, otherToken, _amount, _rType, _timeout, block.timestamp);
         }
     }
-
-
-
-    function _getTokenPrice() public view returns(uint256) {
-        address token0 = ISwapPair(lpAddress).token0();
-        address token1 = ISwapPair(lpAddress).token1();
-        (uint112 token0Amount,uint112 token1Amount,)=ISwapPair(lpAddress).getReserves();
-        uint256 price0 = uint256(token0Amount) * 10**18 / uint256(token1Amount);
-        uint256 price1 = uint256(token1Amount) * 10**18 / uint256(token0Amount);
-        if(token0 == baseToken){
-            return price0;
-        }
-            return price1;
-    }
-    // called once by the factory at time of deployment
-    function initialize(address _holder, address _lpAddr, uint256 _period, uint256 _ref, uint256 _limit, uint256 _start,address _router) external onlyAdmin{
-        // require(msg.sender == stakeFactory, 'Pool: FORBIDDEN'); // sufficient check
-        initHolderAddress = _holder;
-        _owner = _holder;
-        lpAddress = _lpAddr;
-        period = _period;
-        releaseRatio = _ref;
-        initHolderAmount = _limit;
-        // starttime = _start;
-        lpReleaseTime = block.timestamp;
-        nextReleaseTime = computeNextReleaseTime(_start);
-        // dailyRewardHour = 10;
-        router = _router;
-        factory = ISwapRouter(router).factory();
-        IERC20(ISwapPair(_lpAddr).token0()).safeApprove(router, ~uint(0));
-        IERC20(ISwapPair(_lpAddr).token1()).safeApprove(router, ~uint(0));
-        IERC20(_lpAddr).safeApprove(router, ~uint(0));
-        baseToken = ISwapRouter(router).baseTokenOf(_lpAddr);
-        otherToken = ISwapPair(_lpAddr).token0() == baseToken ? ISwapPair(_lpAddr).token1() : ISwapPair(_lpAddr).token0();
-    }
-
-    modifier checkDayId() {
-        if(block.timestamp >= checkTime + 86400){
-            dayId++;
-            dayPower = dayPower * 102/100;
-        }
-        _;
-    }
-
-
-    function computeNextReleaseTime(uint256 _time) public view returns(uint256){
-        return _time + period;
-    }
-
-
-    function setRewardPeriod(uint256 _hour) external onlyAdmin {
-        rewardPeriod = _hour;
-    }
-
-    function setReleasePeriod(uint256 _hour) external onlyAdmin {
-        period = _hour;
-    }
-
-    function takeInitLp() public {
-        require(msg.sender == initHolderAddress, "Pool: only init holder can take init lp");
-        require(initHolderAmount > 0, "Pool: init lp token has been token");
-        require(lpReleaseTime <= block.timestamp, "Pool:  Not yet time to release");
-        if(IERC20(lpAddress).balanceOf(address(this)) < initHolderAmount) {
-            IERC20(lpAddress).safeTransfer(msg.sender, IERC20(lpAddress).balanceOf(address(this)));
-        } else {
-            IERC20(lpAddress).safeTransfer(msg.sender, initHolderAmount);
-        }
-        initHolderAmount = 0;
-    }
-
-    function addLock(uint _time) public onlyAdmin {
-        require(!flag, "have been locked");
-        lpReleaseTime = lpReleaseTime + _time;
-        flag = true;
-    }
-
-    function takeToken(address token, address to, uint256 amount) public onlyAdmin {
-        require(token == baseToken, "Pool: only base token can be taken");
-        IERC20(token).safeTransfer(to, amount);
-    }
-
-    function setFeeInfo(address _fund, address _community, uint256 _fundFee, uint256 _commFee, uint256 _nodeFee) public onlyAdmin {
-        fundAddress = _fund;
-        stakeFundRatio = _fundFee;
-        commAddress = _community;
-        stakeCommRatio = _commFee;
-        stakeNodeRatio = _nodeFee;
-    }
-
-    function setStartTime(uint256 _start) public onlyAdmin {
-        starttime = _start;
-        nextReleaseTime = computeNextReleaseTime(_start);
-    }
-
-    function setFeeInfo2(address _fund, address _comm, address _operate, uint256 _fundFee, uint256 _commFee, uint256 _operateFee) public onlyAdmin {
-        fundAddr2 = _fund;
-        releaseFundRatio = _fundFee;
-        commAddr2 = _comm;
-        releaseCommRatio = _commFee;
-        operAddr = _operate;
-        releaseOperRatio = _operateFee;
-    }
-
-    function transferOwnership(address _newOwner) public {
-        require(_owner == msg.sender, "Pool: only owner can transfer ownership");
-        _owner = _newOwner;
-    }
-
-    function transferInitHolder(address _newHolder) public {
-        require(msg.sender == stakeFactory, 'Pool: FORBIDDEN'); // sufficient check
-        initHolderAddress = _newHolder;
-    }
-
-    function removeLiqRelease() external lock {
-        require(block.timestamp >= nextReleaseTime, "Pool: Not yet time to release");
-        require(ISwapPair(lpAddress).balanceOf(address(this)) > 0, "Pool: No tokens to release");
-        uint initBalance = IERC20(otherToken).balanceOf(address(this));
-        uint amountToRelease = ISwapPair(lpAddress).balanceOf(address(this)).mul(releaseRatio).div(FEE_RATE_BASE);
-        address tokenA = ISwapPair(lpAddress).token0();
-        address tokenB = ISwapPair(lpAddress).token1();
-        (uint amountA, uint amountB) = ISwapRouter(router).removeLiquidity(
-            tokenA, tokenB, amountToRelease, 0, 0, address(this), block.timestamp + 300);
-
-        (address token0,) = ISwapFactory(factory).sortTokens(tokenA, tokenB);
-        (uint amount0, uint amount1) = tokenA == token0 ? (amountA, amountB) : (amountB, amountA);
-        // 买币
-        uint usdtAmount = tokenA == ISwapRouter(router).baseTokenOf(lpAddress) ? amount0 : amount1;
-        address[] memory path = new address[](2);
-        path[0] = baseToken;
-        path[1] = otherToken;
-        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            usdtAmount, 0, path, address(this), block.timestamp + 300);
-        nextReleaseTime = computeNextReleaseTime(block.timestamp);
-        uint addBalance = IERC20(otherToken).balanceOf(address(this)).sub(initBalance);
-        if(releaseFundRatio > 0) {
-            IERC20(otherToken).safeTransfer(fundAddr2, addBalance.mul(releaseFundRatio).div(FEE_RATE_BASE));
-        }
-        if(releaseCommRatio > 0) {
-            IERC20(otherToken).safeTransfer(commAddr2, addBalance.mul(releaseCommRatio).div(FEE_RATE_BASE));
-        }
-        if(releaseOperRatio > 0) {
-            IERC20(otherToken).safeTransfer(operAddr, addBalance.mul(releaseOperRatio).div(FEE_RATE_BASE));
-        }
-        _addReward(addBalance * releaseBaseRatio/FEE_RATE_BASE);
-        emit Release(addBalance, block.timestamp);
-    }
-
-
-    function stakePower(address addr, uint256 amount) public onlyAdmin {       
-        _hashUpdate(addr,amount);
-        emit Stake(addr, amount, block.timestamp);
-    }
-
-    function batchStakePower(address[] memory addrs, uint256[] memory amounts) public onlyAdmin {       
-        require(addrs.length == amounts.length,"DATA ERROR");
-        for(uint256 i =0;i< addrs.length;i++){
-        _hashUpdate(addrs[i],amounts[i]);
-        emit Stake(addrs[i], amounts[i], block.timestamp);
-        }
-    }
-
-    
-    function stake(uint256 amount) external  checkDayId lock {
-        require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
-        require(block.timestamp >= starttime, 'Pool: NOT START');
-        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amount);
-        uint256 usdtAmount = amount.div(2);
-        address[] memory path = new address[](2);
-        path[0] = baseToken;
-        path[1] = otherToken;
-        uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
-        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            usdtAmount, 0, path, address(this), block.timestamp + 300);
-        uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
-        ISwapRouter(router).addLiquidity(
-            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
-        emit Stake(msg.sender, amount, block.timestamp);
-        _hashUpdate(msg.sender,amount);
-    }
-
-    function _hashUpdate(address account,uint256 amount) internal updateReward(account){
-        uint256 power = amount* dayPower;
-        hashPower[account] += power;
-        totalHashPower += power;
-        dailyPower[account][dayId] += power;
-        address inviter = IRelation(relation).Inviter(account);
-        uint256 tpower = power *(10**18 + power * dailyPower[inviter][dayId])/(power+dailyPower[inviter][dayId]);
-        TPower[inviter][dayId] += tpower;
-        address inviter2 = IRelation(relation).Inviter(inviter);
-        NPower[inviter][dayId] += tpower;
-    }
-
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens (
-        uint amountIn,
-        uint amountOutMin,
-        address[] calldata path,
-        address to,
-        uint deadline
-    ) 
-    external  checkDayId lock
-    {
-        require(path[0] == otherToken,"Token Error");
-        uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
-        IERC20(otherToken).safeTransferFrom(msg.sender, address(this), amountIn);
-        uint256 newAmountIn = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
-        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            newAmountIn, amountOutMin, path, to, block.timestamp + 300);
-        uint256 price = _getTokenPrice();
-        uint256 amount = newAmountIn * price * 45/100;
-        _hashUpdate(msg.sender,amount);
-        emit Stake(msg.sender, amount, block.timestamp);
-    }
-
-
-    uint256 public totalHashPower;
-    mapping(address => uint256) public hashPower;
-
-    function balanceOf(address account) public view returns (uint256) {
-        return hashPower[account];
-    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 }
