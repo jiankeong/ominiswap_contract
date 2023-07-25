@@ -1424,9 +1424,15 @@ contract OmniStakePool is AdminRole{
     }
 
 
-    function stakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
+    function stakePower(address addr, uint256 amount) public onlyAdmin {       
         _hashUpdate(addr,amount*10**18);
         emit Stake(addr, amount, block.timestamp);
+    }
+
+    function unstakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
+        uint256 power = amount* dayPower/10**18;
+        hashPower[account] -= power;
+        totalHashPower -= power;
     }
 
     function batchStakePower(address[] memory addrs, uint256[] memory amounts) public onlyAdmin {       
@@ -1473,6 +1479,8 @@ contract OmniStakePool is AdminRole{
         emit Stake(msg.sender, amount, block.timestamp);
         _hashUpdate(msg.sender,amount);
     }
+
+
 
 
 
