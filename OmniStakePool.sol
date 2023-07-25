@@ -1430,7 +1430,7 @@ contract OmniStakePool is AdminRole{
     }
 
     function unstakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
-        uint256 power = amount* dayPower/10**18;
+        uint256 power = amount* dayPower;
         hashPower[account] -= power;
         totalHashPower -= power;
     }
