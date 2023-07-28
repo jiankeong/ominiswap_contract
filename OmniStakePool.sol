@@ -1138,10 +1138,14 @@ contract OmniStakePool is AdminRole{
     // mapping(bytes32 => bool) private orders;
 
     mapping(address => mapping(uint256 => uint256)) public dailyPower;
-    mapping(address => mapping(uint256 => uint256)) public TPower;
-    mapping(address => mapping(uint256 => uint256)) public NPower;
+    // mapping(address => mapping(uint256 => uint256)) public TPower;
+    // mapping(address => mapping(uint256 => uint256)) public NPower;
 
-
+    uint256 public totalHashPower;
+    mapping(address => uint256) public hashPower;
+    mapping(address => uint256) public tPower;
+    mapping(address => uint256) public nPower;
+    mapping(address => uint256) public teamPower;
 
     uint private unlocked = 1;
 
@@ -1485,15 +1489,14 @@ contract OmniStakePool is AdminRole{
         }
     }
 
-    function batchTeamUpdate(address[] memory accounts,uint256[] memory amounts) external onlyAdmin {
+    function batchTeamUpdate(address[] memory accounts) external onlyAdmin {
         require(accounts.length == amounts.length,"DATA ERROR");
         for(uint256 i=0;i<accounts.length;i++){
-            _teamUpdate(accounts[i],amounts[i]);
+            address addr = accounts[i];
+            uint256 amount = hashPower[addr];
+            _teamUpdate(addr,amount);
         }     
     }
-
-
-
 
     function _hashUpdate(address account,uint256 amount) internal updateReward(account){
         uint256 power = amount* dayPower/10**18;
@@ -1529,9 +1532,7 @@ contract OmniStakePool is AdminRole{
     }
 
 
-    uint256 public totalHashPower;
-    mapping(address => uint256) public hashPower;
-    mapping(address => uint256) public teamPower;
+
 
     function balanceOf(address account) public view returns (uint256) {
         return hashPower[account];
@@ -1550,14 +1551,28 @@ contract OmniStakePool is AdminRole{
         return tAmount;
     }
 
+
+    function batchUpdateTPower(address[] memory accounts) external onlyAdmin {
+        
+        for(uint256 i=0;i<accounts.length;i++){
+           tPower[accounts] = viewTAmount(addr);
+        }     
+    }
+
+    function batchUpdateNPower(address[] memory accounts) external onlyAdmin {
+        for(uint256 i=0;i<accounts.length;i++){
+           nPower[accounts] = viewNAmount(addr);
+        }     
+    }
+
     function viewNAmount(address account) public view returns(uint256){
         uint256 length = IRelation(relation).invListLength(account);
         uint256 nAmount;
         address[] memory team= IRelation(relation).getInvList(account);
         for(uint256 i=0;i<length;i++){
             address addr =  team[i];
-            uint256 tAmount = viewTAmount(addr);
-            nAmount += tAmount;
+            // uint256 tAmount = viewTAmount(addr);
+            nAmount += tPower[addr];
         }
         return nAmount;
     }
