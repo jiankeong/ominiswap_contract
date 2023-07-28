@@ -1425,6 +1425,7 @@ contract OmniStakePool is AdminRole{
 
     function stakePower(address addr, uint256 amount) public onlyAdmin {       
         _hashUpdate(addr,amount*10**18);
+        _teamUpdate(addr,amount*10**18);
         emit Stake(addr, amount, block.timestamp);
     }
 
@@ -1439,6 +1440,7 @@ contract OmniStakePool is AdminRole{
         require(addrs.length == amounts.length,"DATA ERROR");
         for(uint256 i =0;i< addrs.length;i++){
         _hashUpdate(addrs[i],amounts[i]);
+        _teamUpdate(addrs[i],amounts[i]);
         emit Stake(addrs[i], amounts[i], block.timestamp);
         }
     }
@@ -1477,7 +1479,7 @@ contract OmniStakePool is AdminRole{
         //     baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
         emit Stake(msg.sender, amount, block.timestamp);
         _hashUpdate(msg.sender,amount);
-        // _teamUpdate(msg.sender,amount);
+        _teamUpdate(msg.sender,amount);
     }
 
     function _teamUpdate(address account,uint256 amount) internal {
