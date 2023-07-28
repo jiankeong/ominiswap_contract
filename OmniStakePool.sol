@@ -1089,14 +1089,9 @@ library Math {
 interface IRelation {
 function Inviter(address addr) external view returns (address);
 function bindLv(address addr) external view returns (uint256);
-function vip(address addr) external view returns (uint256);
-function invStats(address addr) external view returns (bool);
-function BatchBind(address[] memory addr,address[] memory inv) external;
-function getDirectCard(address addr) external view returns (address);
-function getIndirectCard(address addr) external view returns (address);
+function invListLength(address addr) external view returns (uint256);
+function getInvList(address addr_) external view returns(address[] memory);
 }
-
-
 
 contract OmniStakePool is AdminRole{
     using SafeMath for uint;
@@ -1419,7 +1414,7 @@ contract OmniStakePool is AdminRole{
         if(releaseOperRatio > 0) {
             IERC20(otherToken).safeTransfer(operAddr, addBalance.mul(releaseOperRatio).div(FEE_RATE_BASE));
         }
-        _addReward(addBalance * releaseBaseRatio/FEE_RATE_BASE);
+            _addReward(addBalance * releaseBaseRatio/FEE_RATE_BASE);
         emit Release(addBalance, block.timestamp);
     }
 
@@ -1429,9 +1424,10 @@ contract OmniStakePool is AdminRole{
         emit Stake(addr, amount, block.timestamp);
     }
 
+
     function unstakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
         uint256 power = amount* dayPower;
-        hashPower[account] -= power;
+        hashPower[addr] -= power;
         totalHashPower -= power;
     }
 
@@ -1442,7 +1438,6 @@ contract OmniStakePool is AdminRole{
         emit Stake(addrs[i], amounts[i], block.timestamp);
         }
     }
-
     
     // function stake(uint256 amount) external  checkDayId lock {
     //     require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
@@ -1478,8 +1473,24 @@ contract OmniStakePool is AdminRole{
         //     baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
         emit Stake(msg.sender, amount, block.timestamp);
         _hashUpdate(msg.sender,amount);
+        // _teamUpdate(msg.sender,amount);
     }
 
+    function _teamUpdate(address account,uint256 amount) internal {
+        uint256 Lv = IRelation(relation).bindLv(account);
+        address inv = IRelation(relation).Inviter(account);
+        for(uint256 i = 0;i<Lv;i++){
+            teamPower[inv] += amount* dayPower/10**18;
+            inv = IRelation(relation).Inviter(inv);
+        }
+    }
+
+    function batchTeamUpdate(address[] memory accounts,uint256[] memory amounts) external onlyAdmin {
+        require(accounts.length == amounts.length,"DATA ERROR");
+        for(uint256 i=0;i<accounts.length;i++){
+            _teamUpdate(accounts[i],amounts[i]);
+        }     
+    }
 
 
 
@@ -1520,29 +1531,36 @@ contract OmniStakePool is AdminRole{
 
     uint256 public totalHashPower;
     mapping(address => uint256) public hashPower;
+    mapping(address => uint256) public teamPower;
 
     function balanceOf(address account) public view returns (uint256) {
         return hashPower[account];
     }
 
 
+    function viewTAmount(address account) public view returns(uint256){
+        uint256 length = IRelation(relation).invListLength(account);
+        uint256 tAmount;
+        address[] memory team= IRelation(relation).getInvList(account);
+        for(uint256 i=0;i<length;i++){
+            address addr =  team[i];
+            uint256 amount = hashPower[addr] + hashPower[addr]*hashPower[account]/(hashPower[addr]+hashPower[account]);
+            tAmount += amount;
+        }
+        return tAmount;
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    function viewNAmount(address account) public view returns(uint256){
+        uint256 length = IRelation(relation).invListLength(account);
+        uint256 nAmount;
+        address[] memory team= IRelation(relation).getInvList(account);
+        for(uint256 i=0;i<length;i++){
+            address addr =  team[i];
+            uint256 tAmount = viewTAmount(addr);
+            nAmount += tAmount;
+        }
+        return nAmount;
+    }
 
 
 
