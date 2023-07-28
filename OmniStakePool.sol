@@ -1490,7 +1490,7 @@ contract OmniStakePool is AdminRole{
     }
 
     function batchTeamUpdate(address[] memory accounts) external onlyAdmin {
-        require(accounts.length == amounts.length,"DATA ERROR");
+        // require(accounts.length == amounts.length,"DATA ERROR");
         for(uint256 i=0;i<accounts.length;i++){
             address addr = accounts[i];
             uint256 amount = hashPower[addr];
@@ -1555,13 +1555,15 @@ contract OmniStakePool is AdminRole{
     function batchUpdateTPower(address[] memory accounts) external onlyAdmin {
         
         for(uint256 i=0;i<accounts.length;i++){
-           tPower[accounts] = viewTAmount(addr);
+            address addr = accounts[i];
+            tPower[addr] = viewTAmount(addr);
         }     
     }
 
     function batchUpdateNPower(address[] memory accounts) external onlyAdmin {
         for(uint256 i=0;i<accounts.length;i++){
-           nPower[accounts] = viewNAmount(addr);
+             address addr = accounts[i];
+             nPower[addr] = viewNAmount(addr);
         }     
     }
 
