@@ -1093,6 +1093,11 @@ function invListLength(address addr) external view returns (uint256);
 function getInvList(address addr_) external view returns(address[] memory);
 }
 
+interface INFTPOOL{
+    function addReward(uint256 amount) external;
+}
+
+
 contract OmniStakePool is AdminRole{
     using SafeMath for uint;
     using SafeMath for uint256;
@@ -1121,19 +1126,22 @@ contract OmniStakePool is AdminRole{
     uint256 public stakeNodeRatio;
     uint256 public stakeFundRatio;
     uint256 public stakeCommRatio;
-    address public fundAddress;
-    address public commAddress;
-    uint256 public releaseOperRatio;
-    uint256 public releaseFundRatio;
-    uint256 public releaseCommRatio;
+    address public fundAddress = 0x2C9b7E8D66081D4976A2d56FF1909f6A1F0B626B;
+    address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
+    address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
+    address public nftAddress = 0x4493CFd44f603bF85570302326dd417120bE6251;
+    uint256 public releaseFundRatio = 400;
+    uint256 public releaseCommRatio = 200;
+    uint256 public releaseOperRatio = 400;
+    uint256 public releaseNftRatio = 500;
     uint256 public releaseBaseRatio = 5000;
-    address public fundAddr2;
-    address public commAddr2;
-    address public operAddr;
+    // address public fundAddr2;
+    // address public commAddr2;
     address public baseToken;
     address public otherToken;
     address private _owner;
     bool public flag;
+    bool public poolStatus;
     // mapping(address => uint256) private nonce;
     // mapping(bytes32 => bool) private orders;
 
@@ -1170,6 +1178,9 @@ contract OmniStakePool is AdminRole{
     mapping(address => uint256) public userRewardPerTokenPaid;
     mapping(address => uint256) public rewards;
     mapping(address => uint256) public rewardClaimed;
+    mapping(address => uint256) public totalDisClaimed;
+    mapping(address =>mapping(uint256 => uint256)) public disReward;
+    mapping(address =>mapping(uint256 => uint256)) public lastDisClaimed;
 
     event RewardAdded(uint256 reward);
     event Staked(address indexed user, uint256 amount);
@@ -1276,8 +1287,6 @@ contract OmniStakePool is AdminRole{
         }
     }
 
-
-
     function _getTokenPrice() public view returns(uint256) {
         address token0 = ISwapPair(lpAddress).token0();
         address token1 = ISwapPair(lpAddress).token1();
@@ -1298,9 +1307,10 @@ contract OmniStakePool is AdminRole{
         period = _period;
         releaseRatio = _ref;
         initHolderAmount = _limit;
-        // starttime = _start;
+        starttime = _start;
         lpReleaseTime = block.timestamp;
         nextReleaseTime = computeNextReleaseTime(_start);
+        checkTime = nextReleaseTime;
         // dailyRewardHour = 10;
         router = _router;
         factory = ISwapRouter(router).factory();
@@ -1315,6 +1325,7 @@ contract OmniStakePool is AdminRole{
         if(block.timestamp >= checkTime + 86400){
             dayId++;
             dayPower = dayPower * 102/100;
+            checkTime += 86400;
         }
         _;
     }
@@ -1323,7 +1334,6 @@ contract OmniStakePool is AdminRole{
     function computeNextReleaseTime(uint256 _time) public view returns(uint256){
         return _time + period;
     }
-
 
     function setRewardPeriod(uint256 _hour) external onlyAdmin {
         rewardPeriod = _hour;
@@ -1367,16 +1377,21 @@ contract OmniStakePool is AdminRole{
     function setStartTime(uint256 _start) public onlyAdmin {
         starttime = _start;
         nextReleaseTime = computeNextReleaseTime(_start);
+        checkTime = nextReleaseTime;
     }
 
-    function setFeeInfo2(address _fund, address _comm, address _operate, uint256 _fundFee, uint256 _commFee, uint256 _operateFee) public onlyAdmin {
-        fundAddr2 = _fund;
-        releaseFundRatio = _fundFee;
-        commAddr2 = _comm;
-        releaseCommRatio = _commFee;
-        operAddr = _operate;
-        releaseOperRatio = _operateFee;
+    function setPoolStatus(bool _value) public onlyAdmin {
+        poolStatus = _value;
     }
+
+    // function setFeeInfo2(address _fund, address _comm, address _operate, uint256 _fundFee, uint256 _commFee, uint256 _operateFee) public onlyAdmin {
+    //     fundAddr = _fund;
+    //     releaseFundRatio = _fundFee;
+    //     commAddr = _comm;
+    //     releaseCommRatio = _commFee;
+    //     operAddr = _operate;
+    //     releaseOperRatio = _operateFee;
+    // }
 
     function transferOwnership(address _newOwner) public {
         require(_owner == msg.sender, "Pool: only owner can transfer ownership");
@@ -1388,7 +1403,7 @@ contract OmniStakePool is AdminRole{
         initHolderAddress = _newHolder;
     }
 
-    function removeLiqRelease() external lock {
+    function removeLiqRelease() external checkDayId lock {
         require(block.timestamp >= nextReleaseTime, "Pool: Not yet time to release");
         require(ISwapPair(lpAddress).balanceOf(address(this)) > 0, "Pool: No tokens to release");
         uint initBalance = IERC20(otherToken).balanceOf(address(this));
@@ -1410,15 +1425,20 @@ contract OmniStakePool is AdminRole{
         nextReleaseTime = computeNextReleaseTime(block.timestamp);
         uint addBalance = IERC20(otherToken).balanceOf(address(this)).sub(initBalance);
         if(releaseFundRatio > 0) {
-            IERC20(otherToken).safeTransfer(fundAddr2, addBalance.mul(releaseFundRatio).div(FEE_RATE_BASE));
+            IERC20(otherToken).safeTransfer(fundAddress, addBalance.mul(releaseFundRatio).div(FEE_RATE_BASE));
         }
         if(releaseCommRatio > 0) {
-            IERC20(otherToken).safeTransfer(commAddr2, addBalance.mul(releaseCommRatio).div(FEE_RATE_BASE));
+            IERC20(otherToken).safeTransfer(commAddress, addBalance.mul(releaseCommRatio).div(FEE_RATE_BASE));
         }
         if(releaseOperRatio > 0) {
-            IERC20(otherToken).safeTransfer(operAddr, addBalance.mul(releaseOperRatio).div(FEE_RATE_BASE));
+            IERC20(otherToken).safeTransfer(operAddress, addBalance.mul(releaseOperRatio).div(FEE_RATE_BASE));
         }
-            _addReward(addBalance * releaseBaseRatio/FEE_RATE_BASE);
+        if(releaseNftRatio > 0) {
+            IERC20(otherToken).safeTransfer(nftAddress, addBalance.mul(releaseNftRatio).div(FEE_RATE_BASE));
+            INFTPOOL(nftAddress).addReward(addBalance.mul(releaseNftRatio).div(FEE_RATE_BASE));
+        }
+        _addReward(addBalance * releaseBaseRatio/FEE_RATE_BASE);
+        
         emit Release(addBalance, block.timestamp);
     }
 
@@ -1466,17 +1486,22 @@ contract OmniStakePool is AdminRole{
     function stake(uint256 amount) external lock {
         require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
         require(block.timestamp >= starttime, 'Pool: NOT START');
+        if(poolStatus){
+        uint256 usdtAmount = amount.div(2);
+        address[] memory path = new address[](2);
+        path[0] = baseToken;
+        path[1] = otherToken;
+        uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
+        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            usdtAmount, 0, path, address(this), block.timestamp + 300);
+        uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        ISwapRouter(router).addLiquidity(
+            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+        }
+        else{
         IERC20(baseToken).safeTransferFrom(msg.sender, initAddress, amount);
-        // uint256 usdtAmount = amount.div(2);
-        // address[] memory path = new address[](2);
-        // path[0] = baseToken;
-        // path[1] = otherToken;
-        // uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
-        // ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        //     usdtAmount, 0, path, address(this), block.timestamp + 300);
-        // uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
-        // ISwapRouter(router).addLiquidity(
-        //     baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+        }
+
         emit Stake(msg.sender, amount, block.timestamp);
         _hashUpdate(msg.sender,amount);
         _teamUpdate(msg.sender,amount);
@@ -1504,12 +1529,6 @@ contract OmniStakePool is AdminRole{
         uint256 power = amount* dayPower/10**18;
         hashPower[account] += power;
         totalHashPower += power;
-        // dailyPower[account][dayId] += power;
-        // address inviter = IRelation(relation).Inviter(account);
-        // uint256 tpower = power *(10**18 + power * dailyPower[inviter][dayId])/(power+dailyPower[inviter][dayId]);
-        // TPower[inviter][dayId] += tpower;
-        // address inviter2 = IRelation(relation).Inviter(inviter);
-        // NPower[inviter][dayId] += tpower;
     }
 
     function swapExactTokensForTokensSupportingFeeOnTransferTokens (
@@ -1553,19 +1572,13 @@ contract OmniStakePool is AdminRole{
         return tAmount;
     }
 
-
-    function batchUpdateTPower(address[] memory accounts) external onlyAdmin {
-        
+    function batchUpdateTPower(address[] memory accounts) external onlyAdmin { 
         for(uint256 i=0;i<accounts.length;i++){
             address addr = accounts[i];
-            tPower[addr] = viewTAmount(addr);
-        }     
-    }
-
-    function batchUpdateNPower(address[] memory accounts) external onlyAdmin {
-        for(uint256 i=0;i<accounts.length;i++){
-             address addr = accounts[i];
-             nPower[addr] = viewNAmount(addr);
+            uint256 tAmount = viewTAmount(addr);
+            if(tAmount >0 && tPower[addr] != tAmount){
+            tPower[addr] = tAmount;
+            }
         }     
     }
 
@@ -1581,7 +1594,37 @@ contract OmniStakePool is AdminRole{
         return nAmount;
     }
 
+    function batchUpdateNPower(address[] memory accounts) external onlyAdmin {
+        for(uint256 i=0;i<accounts.length;i++){
+             address addr = accounts[i];
+             uint256 nAmount = viewNAmount(addr);
+            if(nAmount >0 && tPower[addr] != nAmount){            
+             nPower[addr] = nAmount;
+            }     
+        }
+    }
 
 
+    function batchDisReward(address[] memory addrs,uint256[] memory amounts, uint256 typeID) external onlyAdmin{
+        require(addrs.length == amounts.length,"DATA ERROR");
+        for(uint256 i=0;i<addrs.length;i++){
+        address addr = addrs[i];
+        disReward[addr][typeID] += amounts[i];
+    }
+    }
+
+    function claim() checkDayId external {
+        // require(disReward[msg.sender][typeID] > 0,"No Reward to Claim");
+        for(uint256 i = 1; i<5;i++){
+        if(disReward[msg.sender][i]>0){
+        uint256 reward = disReward[msg.sender][i];
+        totalDisClaimed[msg.sender] += reward;
+        lastDisClaimed[msg.sender][dayId] += reward;
+        IERC20(otherToken).safeTransfer(msg.sender, reward);  
+        disReward[msg.sender][i] = 0;
+        emit RewardPaid(msg.sender, reward);
+        }
+        }
+    }
 
 }
