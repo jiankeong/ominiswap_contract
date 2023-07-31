@@ -1114,7 +1114,7 @@ contract OmniStakePool is AdminRole{
     uint256 public period;
     address public lpAddress;
     address public initAddress = 0xAc81609078Ca25ea81935029dC78405650662334;
-    uint256 public releaseRatio = 80;
+    uint256 public releaseRatio = 40;
     uint256 private initHolderAmount;
     address private initHolderAddress;
     uint256 public starttime;
@@ -1129,7 +1129,7 @@ contract OmniStakePool is AdminRole{
     address public fundAddress = 0x2C9b7E8D66081D4976A2d56FF1909f6A1F0B626B;
     address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
     address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
-    address public nftAddress = 0x4493CFd44f603bF85570302326dd417120bE6251;
+    address public nftAddress;
     uint256 public releaseFundRatio = 400;
     uint256 public releaseCommRatio = 200;
     uint256 public releaseOperRatio = 400;
@@ -1424,6 +1424,7 @@ contract OmniStakePool is AdminRole{
             usdtAmount, 0, path, address(this), block.timestamp + 300);
         nextReleaseTime = computeNextReleaseTime(block.timestamp);
         uint addBalance = IERC20(otherToken).balanceOf(address(this)).sub(initBalance);
+        lastReleaseAmount = addBalance;
         if(releaseFundRatio > 0) {
             IERC20(otherToken).safeTransfer(fundAddress, addBalance.mul(releaseFundRatio).div(FEE_RATE_BASE));
         }
@@ -1547,12 +1548,11 @@ contract OmniStakePool is AdminRole{
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             newAmountIn, amountOutMin, path, to, block.timestamp + 300);
         uint256 price = _getTokenPrice();
-        uint256 amount = newAmountIn * price * 45/100;
+        uint256 amount = newAmountIn * price * 45 / 10**20;
         _hashUpdate(msg.sender,amount);
+        _teamUpdate(msg.sender,amount);
         emit Stake(msg.sender, amount, block.timestamp);
     }
-
-
 
 
     function balanceOf(address account) public view returns (uint256) {
@@ -1566,7 +1566,7 @@ contract OmniStakePool is AdminRole{
         address[] memory team= IRelation(relation).getInvList(account);
         for(uint256 i=0;i<length;i++){
             address addr =  team[i];
-            uint256 amount = hashPower[addr] + hashPower[addr]*hashPower[account]/(hashPower[addr]+hashPower[account]);
+            uint256 amount = (hashPower[addr] + hashPower[addr]*hashPower[account]/(hashPower[addr]+hashPower[account])) * lastReleaseAmount/totalHashPower;
             tAmount += amount;
         }
         return tAmount;
