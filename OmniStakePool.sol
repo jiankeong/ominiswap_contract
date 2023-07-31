@@ -1129,7 +1129,7 @@ contract OmniStakePool is AdminRole{
     address public fundAddress = 0x2C9b7E8D66081D4976A2d56FF1909f6A1F0B626B;
     address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
     address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
-    address public nftAddress;
+    address public nftAddress = 0x4493CFd44f603bF85570302326dd417120bE6251;
     uint256 public lastReleaseAmount;
     uint256 public releaseFundRatio = 400;
     uint256 public releaseCommRatio = 200;
@@ -1142,7 +1142,7 @@ contract OmniStakePool is AdminRole{
     address public otherToken;
     address private _owner;
     bool public flag;
-    bool public poolStatus;
+    bool public poolStatus = true;
     // mapping(address => uint256) private nonce;
     // mapping(bytes32 => bool) private orders;
 
@@ -1189,10 +1189,10 @@ contract OmniStakePool is AdminRole{
     event RewardPaid(address indexed user, uint256 reward);
 
     constructor(
-        uint256 starttime_
+        // uint256 starttime_
     ) {
-        checkTime = starttime_;
-        starttime = starttime_;
+        // checkTime = starttime_;
+        // starttime = starttime_;
     }
 
     modifier updateReward(address account) {
@@ -1331,12 +1331,6 @@ contract OmniStakePool is AdminRole{
         _;
     }
 
-    function setApprove(uint256 amount) external onlyAdmin {
-        IERC20(baseToken).approve(router, amount);
-        IERC20(otherToken).approve(router, amount);
-        IERC20(lpAddress).approve(router, amount);
-    }
-
 
     function computeNextReleaseTime(uint256 _time) public view returns(uint256){
         return _time + period;
@@ -1350,17 +1344,17 @@ contract OmniStakePool is AdminRole{
         period = _hour;
     }
 
-    function takeInitLp() public {
-        require(msg.sender == initHolderAddress, "Pool: only init holder can take init lp");
-        require(initHolderAmount > 0, "Pool: init lp token has been token");
-        require(lpReleaseTime <= block.timestamp, "Pool:  Not yet time to release");
-        if(IERC20(lpAddress).balanceOf(address(this)) < initHolderAmount) {
-            IERC20(lpAddress).safeTransfer(msg.sender, IERC20(lpAddress).balanceOf(address(this)));
-        } else {
-            IERC20(lpAddress).safeTransfer(msg.sender, initHolderAmount);
-        }
-        initHolderAmount = 0;
-    }
+    // function takeInitLp() public {
+    //     require(msg.sender == initHolderAddress, "Pool: only init holder can take init lp");
+    //     require(initHolderAmount > 0, "Pool: init lp token has been token");
+    //     require(lpReleaseTime <= block.timestamp, "Pool:  Not yet time to release");
+    //     if(IERC20(lpAddress).balanceOf(address(this)) < initHolderAmount) {
+    //         IERC20(lpAddress).safeTransfer(msg.sender, IERC20(lpAddress).balanceOf(address(this)));
+    //     } else {
+    //         IERC20(lpAddress).safeTransfer(msg.sender, initHolderAmount);
+    //     }
+    //     initHolderAmount = 0;
+    // }
 
     function addLock(uint _time) public onlyAdmin {
         require(!flag, "have been locked");
@@ -1405,10 +1399,10 @@ contract OmniStakePool is AdminRole{
         _owner = _newOwner;
     }
 
-    function transferInitHolder(address _newHolder) public {
-        require(msg.sender == stakeFactory, 'Pool: FORBIDDEN'); // sufficient check
-        initHolderAddress = _newHolder;
-    }
+    // function transferInitHolder(address _newHolder) public {
+    //     require(msg.sender == stakeFactory, 'Pool: FORBIDDEN'); // sufficient check
+    //     initHolderAddress = _newHolder;
+    // }
 
     function removeLiqRelease() external checkDayId lock {
         require(block.timestamp >= nextReleaseTime, "Pool: Not yet time to release");
@@ -1429,7 +1423,7 @@ contract OmniStakePool is AdminRole{
         path[1] = otherToken;
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             usdtAmount, 0, path, address(this), block.timestamp + 300);
-        nextReleaseTime = computeNextReleaseTime(block.timestamp);
+        nextReleaseTime = computeNextReleaseTime(nextReleaseTime);
         uint addBalance = IERC20(otherToken).balanceOf(address(this)).sub(initBalance);
         lastReleaseAmount = addBalance;
         if(releaseFundRatio > 0) {
@@ -1451,20 +1445,20 @@ contract OmniStakePool is AdminRole{
     }
 
 
-    function stakePower(address addr, uint256 amount) public onlyAdmin {       
+    function stakePower(address addr, uint256 amount) public checkDayId onlyAdmin {       
         _hashUpdate(addr,amount*10**18);
         _teamUpdate(addr,amount*10**18);
         emit Stake(addr, amount, block.timestamp);
     }
 
 
-    function unstakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
-        uint256 power = amount* dayPower;
-        hashPower[addr] -= power;
-        totalHashPower -= power;
-    }
+    // function unstakePower(address addr, uint256 amount) public onlyAdmin updateReward(addr){       
+    //     uint256 power = amount* dayPower;
+    //     hashPower[addr] -= power;
+    //     totalHashPower -= power;
+    // }
 
-    function batchStakePower(address[] memory addrs, uint256[] memory amounts) public onlyAdmin {       
+    function batchStakePower(address[] memory addrs, uint256[] memory amounts) public checkDayId onlyAdmin {       
         require(addrs.length == amounts.length,"DATA ERROR");
         for(uint256 i =0;i< addrs.length;i++){
         _hashUpdate(addrs[i],amounts[i]);
@@ -1491,7 +1485,7 @@ contract OmniStakePool is AdminRole{
     //     _hashUpdate(msg.sender,amount);
     // }
 
-    function stake(uint256 amount) external lock {
+    function stake(uint256 amount) external checkDayId lock {
         require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
         require(block.timestamp >= starttime, 'Pool: NOT START');
         if(poolStatus){
