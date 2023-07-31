@@ -1130,6 +1130,7 @@ contract OmniStakePool is AdminRole{
     address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
     address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
     address public nftAddress;
+    uint256 public lastReleaseAmount;
     uint256 public releaseFundRatio = 400;
     uint256 public releaseCommRatio = 200;
     uint256 public releaseOperRatio = 400;
