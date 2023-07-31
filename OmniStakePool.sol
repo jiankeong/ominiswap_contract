@@ -1332,9 +1332,9 @@ contract OmniStakePool is AdminRole{
     }
 
     function setApprove(uint256 amount) external onlyAdmin {
-        IERC20(baseToken).safeApprove(router, amount);
-        IERC20(otherToken).safeApprove(router, amount);
-        IERC20(_lpAddr).safeApprove(router, amount);
+        IERC20(baseToken).safeIncreaseAllowance(router, amount);
+        IERC20(otherToken).safeIncreaseAllowance(router, amount);
+        IERC20(lpAddress).safeIncreaseAllowance(router, amount);
     }
 
 
