@@ -230,7 +230,7 @@ contract SwapERC20 is ISwapERC20 {
     using SafeMath for uint;
 
     string public override constant name = "OMNISWAP LPs";
-    string public override constant symbol = "DID-LP";
+    string public override constant symbol = "OMNI-LP";
     uint8 public override constant decimals = 18;
     uint  public override totalSupply;
     mapping(address => uint) public override balanceOf;
