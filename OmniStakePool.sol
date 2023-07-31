@@ -1495,6 +1495,7 @@ contract OmniStakePool is AdminRole{
         require(amount >= 100e18, 'Pool: stake amount must be greater than 100');
         require(block.timestamp >= starttime, 'Pool: NOT START');
         if(poolStatus){
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amount);
         uint256 usdtAmount = amount.div(2);
         address[] memory path = new address[](2);
         path[0] = baseToken;
