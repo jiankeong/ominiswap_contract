@@ -1664,6 +1664,17 @@ contract OmniStakePool is AdminRole{
     }
     }
 
+
+    function batchResReward(address[] memory addrs,uint256[] memory amounts, uint256 typeID) external onlyAdmin{
+        require(addrs.length == amounts.length,"DATA ERROR");
+        for(uint256 i=0;i<addrs.length;i++){
+        address addr = addrs[i];
+        disReward[addr][typeID] -= amounts[i];
+    }
+    }
+
+
+
     function claim() checkDayId external {
         // require(disReward[msg.sender][typeID] > 0,"No Reward to Claim");
         for(uint256 i = 1; i<5;i++){
