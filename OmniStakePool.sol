@@ -1130,6 +1130,8 @@ contract OmniStakePool is AdminRole{
     address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
     address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
     address public nftAddress = 0x4493CFd44f603bF85570302326dd417120bE6251;
+    address public swapAddress = 0x28023C6B38D8c9F84B8cc8De7B3C31900a1e4553;
+    address public deadAddress = 0x000000000000000000000000000000000000dEaD;
     uint256 public lastReleaseAmount;
     uint256 public releaseFundRatio = 400;
     uint256 public releaseCommRatio = 200;
@@ -1299,6 +1301,20 @@ contract OmniStakePool is AdminRole{
         }
             return price1;
     }
+
+    function _getSwapPrice() public view returns(uint256) {
+        address token0 = ISwapPair(swapAddress).token0();
+        address token1 = ISwapPair(swapAddress).token1();
+        (uint112 token0Amount,uint112 token1Amount,)=ISwapPair(swapAddress).getReserves();
+        uint256 price0 = uint256(token0Amount) * 10**18 / uint256(token1Amount);
+        uint256 price1 = uint256(token1Amount) * 10**18 / uint256(token0Amount);
+        if(token0 == baseToken){
+            return price0;
+        }
+            return price1;
+    }
+
+
     // called once by the factory at time of deployment
     function initialize(address _holder, address _lpAddr, uint256 _period, uint256 _ref, uint256 _limit, uint256 _start,address _router) external onlyAdmin{
         // require(msg.sender == stakeFactory, 'Pool: FORBIDDEN'); // sufficient check
@@ -1416,7 +1432,7 @@ contract OmniStakePool is AdminRole{
 
         (address token0,) = ISwapFactory(factory).sortTokens(tokenA, tokenB);
         (uint amount0, uint amount1) = tokenA == token0 ? (amountA, amountB) : (amountB, amountA);
-        // 买币
+    
         uint usdtAmount = tokenA == ISwapRouter(router).baseTokenOf(lpAddress) ? amount0 : amount1;
         address[] memory path = new address[](2);
         path[0] = baseToken;
@@ -1509,6 +1525,39 @@ contract OmniStakePool is AdminRole{
         _hashUpdate(msg.sender,amount);
         _teamUpdate(msg.sender,amount);
     }
+
+    function addLiquidity(
+        address tokenA,
+        address tokenB,
+        uint amountADesired,
+        uint amountBDesired,
+        uint amountAMin,
+        uint amountBMin,
+        address to,
+        uint deadline
+        ) external checkDayId lock {
+        require(tokenA == baseToken,"Wrong Token");
+        require(tokenB == otherToken,"Wrong Token");
+        require(amountADesired >= 100e18, 'Pool: stake amount must be greater than 100');
+        IERC20(baseToken).safeTransferFrom(msg.sender, address(this), amountADesired);
+        IERC20(otherToken).safeTransferFrom(msg.sender, deadAddress, amountBDesired);
+        uint256 usdtAmount = amountADesired.div(2);
+        address[] memory path = new address[](2);
+        path[0] = baseToken;
+        path[1] = otherToken;
+        uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
+        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            usdtAmount, 0, path, address(this), block.timestamp + 300);
+        uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        ISwapRouter(router).addLiquidity(
+            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+        uint256 price = _getSwapPrice();
+        uint256 amount = (amountADesired + amountBDesired*price/10**18)*105/100;
+        emit Stake(msg.sender, amount, block.timestamp);
+        _hashUpdate(msg.sender,amount);
+        _teamUpdate(msg.sender,amount);
+    }
+
 
     function _teamUpdate(address account,uint256 amount) internal {
         uint256 Lv = IRelation(relation).bindLv(account);
