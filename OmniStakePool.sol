@@ -1123,10 +1123,11 @@ contract OmniStakePool is AdminRole{
     uint256 public lpReleaseTime;
     uint256 public rewardPeriod;
     uint256 public nextReleaseTime;
-    uint256 public stakeNodeRatio;
+    uint256 public stakeNodeRatio = 500;
     uint256 public stakeFundRatio;
     uint256 public stakeCommRatio;
     address public fundAddress = 0x2C9b7E8D66081D4976A2d56FF1909f6A1F0B626B;
+    address public feeAddress = 0xf955d0af234A957c78Ac612EF6fF9FeBc0F45283;
     address public commAddress = 0xE37E2d96c3Cc7C95ca8E99619C71B7F3e92444a6;
     address public operAddress = 0x390CC9768ED7D69184228536C22594db02A5128a;
     address public nftAddress = 0x4493CFd44f603bF85570302326dd417120bE6251;
@@ -1594,7 +1595,8 @@ contract OmniStakePool is AdminRole{
     {
         require(path[0] == otherToken,"Token Error");
         uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
-        IERC20(otherToken).safeTransferFrom(msg.sender, address(this), amountIn);
+        IERC20(otherToken).safeTransferFrom(msg.sender, feeAddress, amountIn * stakeNodeRatio/FEE_RATE_BASE);
+        IERC20(otherToken).safeTransferFrom(msg.sender, address(this), amountIn - amountIn * stakeNodeRatio/FEE_RATE_BASE);
         uint256 newAmountIn = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             newAmountIn, amountOutMin, path, to, block.timestamp + 300);
