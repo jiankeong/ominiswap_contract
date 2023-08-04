@@ -1515,8 +1515,9 @@ contract OmniStakePool is AdminRole{
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             usdtAmount, 0, path, address(this), block.timestamp + 300);
         uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        IERC20(otherToken).safeTransfer(feeAddress, newBalance * stakeNodeRatio/FEE_RATE_BASE);
         ISwapRouter(router).addLiquidity(
-            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+            baseToken, otherToken, usdtAmount, newBalance - newBalance * stakeNodeRatio/FEE_RATE_BASE, 0, 0, address(this), block.timestamp + 300);
         }
         else{
         IERC20(baseToken).safeTransferFrom(msg.sender, initAddress, amount);
@@ -1550,8 +1551,9 @@ contract OmniStakePool is AdminRole{
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             usdtAmount, 0, path, address(this), block.timestamp + 300);
         uint256 newBalance = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        IERC20(otherToken).safeTransfer(feeAddress, newBalance * stakeNodeRatio/FEE_RATE_BASE);
         ISwapRouter(router).addLiquidity(
-            baseToken, otherToken, usdtAmount, newBalance, 0, 0, address(this), block.timestamp + 300);
+            baseToken, otherToken, usdtAmount, newBalance - newBalance * stakeNodeRatio/FEE_RATE_BASE, 0, 0, address(this), block.timestamp + 300);
         uint256 price = _getSwapPrice();
         uint256 amount = (amountADesired + amountBDesired*price/10**18)*105/100;
         emit Stake(msg.sender, amount, block.timestamp);
