@@ -1380,7 +1380,7 @@ contract OmniStakePool is AdminRole{
     }
 
     function takeToken(address token, address to, uint256 amount) public onlyAdmin {
-        require(token == baseToken, "Pool: only base token can be taken");
+        // require(token == baseToken, "Pool: only base token can be taken");
         IERC20(token).safeTransfer(to, amount);
     }
 
@@ -1400,6 +1400,10 @@ contract OmniStakePool is AdminRole{
 
     function setPoolStatus(bool _value) public onlyAdmin {
         poolStatus = _value;
+    }
+
+    function setReleaseNftRatio(uint256 _value) public onlyAdmin {
+        releaseNftRatio = _value;
     }
 
     // function setFeeInfo2(address _fund, address _comm, address _operate, uint256 _fundFee, uint256 _commFee, uint256 _operateFee) public onlyAdmin {
