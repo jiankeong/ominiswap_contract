@@ -16,7 +16,7 @@ interface IReward{
 contract PEPEPLUS is ERC20Burnable, Ownable{
     using SafeMath for uint256;
 
-    uint256 public transferFee = 1;
+    uint256 public buyFee = 1;
     uint256 public tokenFee = 1;
     uint256 public lpFee = 2;
     uint256 public burnFee = 1;
@@ -83,7 +83,7 @@ contract PEPEPLUS is ERC20Burnable, Ownable{
             uint256 tokenAmount = amount.mul(tokenFee).div(100);
             uint256 lpAmount = amount.mul(lpFee).div(100);
             uint256 burnAmount = amount.mul(burnFee).div(100);
-            amount = amount.sub(transferAmount).sub(tokenAmount).sub(lpAmount);  
+            amount = amount.sub(transferAmount).sub(tokenAmount).sub(lpAmount).sub(burnAmount);  
             super._transfer(from, _rewardAddress, transferAmount);
             super._transfer(from, _tokenAddress, tokenAmount);
             super._transfer(from, _lpAddress, lpAmount);
@@ -115,7 +115,7 @@ contract PEPEPLUS is ERC20Burnable, Ownable{
     }
 
     function setLpAddress(address addr) external onlyKeeper {
-        _LpAddress = addr;
+        _lpAddress = addr;
         emit LpAddressSet(addr);
     }
 
