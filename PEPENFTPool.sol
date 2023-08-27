@@ -31,6 +31,7 @@ contract PEPENFTPool is AdminRole {
     uint256 public totalReward;
     uint256 public starttime; // starttime TBD
     mapping(uint256 => uint256) public nftReward;
+    mapping(uint256 => uint256) public activeAmount;
     mapping(uint256 => uint256) public nftPower;
     mapping(uint256 => bool) public activeStats;
     mapping(uint256 => uint256) public claimedReward;
