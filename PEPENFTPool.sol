@@ -15,6 +15,7 @@ interface IONFT {
 
 interface IStakePool {
     function stakePower(address addr,uint256 amount) external;
+    function stake(uint256 amount) external;
 }
 
 
@@ -99,11 +100,13 @@ contract PEPENFTPool is AdminRole {
         address addr = IONFT(onft).ownerOf(tokenId);
         require(addr == msg.sender,"NFT OWNERSHIP ERROR");
         require(!activeStats[tokenId],"ACTIVE ALREADY");
-        IERC20(omni).transferFrom(msg.sender,deadAddress,activeAmount[lvl]*10**18);
+        IERC20(omni).transferFrom(msg.sender,address(this),activeAmount[lvl]*10**18);
+        IERC20(omni).safeApprove(stakePool, activeAmount[lvl]*10**18);
+        IStakePool(stakePool).stake(activeAmount[lvl]*10**18);
         IStakePool(stakePool).stakePower(msg.sender,activeAmount[lvl]);
         activeStats[tokenId] = true;
     }
-
+ 
     function viewReward(uint256 tokenId) public view returns(uint256){
         uint256 lvl = IONFT(onft).getType(tokenId);
         address addr = IONFT(onft).ownerOf(tokenId);
