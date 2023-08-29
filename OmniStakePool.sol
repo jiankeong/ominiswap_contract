@@ -1606,10 +1606,16 @@ contract OmniStakePool is AdminRole{
         uint256 newAmountIn = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             newAmountIn, amountOutMin, path, to, block.timestamp + 300);
+
         uint256 price = _getTokenPrice();
         uint256 amount = newAmountIn * price * 45 / 10**20;
         _hashUpdate(msg.sender,amount);
         _teamUpdate(msg.sender,amount);
+        address[] memory newpath = new address[](2);
+        newpath[0] = baseToken;
+        newpath[1] = otherToken;
+        ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        amount, 0, newpath, deadAddress, block.timestamp + 300);
         emit Stake(msg.sender, amount, block.timestamp);
     }
 
