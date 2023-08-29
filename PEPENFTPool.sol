@@ -99,7 +99,7 @@ contract PEPENFTPool is AdminRole {
         address addr = IONFT(onft).ownerOf(tokenId);
         require(addr == msg.sender,"NFT OWNERSHIP ERROR");
         require(!activeStats[tokenId],"ACTIVE ALREADY");
-        IERC20(omni).transferFrom(msg.sender,deadAddress,activeAmount[lvl]);
+        IERC20(omni).transferFrom(msg.sender,deadAddress,activeAmount[lvl]*10**18);
         IStakePool(stakePool).stakePower(msg.sender,activeAmount[lvl]);
         activeStats[tokenId] = true;
     }
