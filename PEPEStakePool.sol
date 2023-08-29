@@ -1550,8 +1550,10 @@ contract PEPEStakePool is AdminRole{
         }
 
         emit Stake(msg.sender, amount, block.timestamp);
+        if(msg.sender != nftAddress){
         _hashUpdate(msg.sender,amount);
         _teamUpdate(msg.sender,amount);
+        }
     }
 
 
