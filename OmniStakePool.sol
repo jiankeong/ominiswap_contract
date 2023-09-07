@@ -1602,11 +1602,11 @@ contract OmniStakePool is AdminRole{
         require(path[0] == otherToken,"Token Error");
         uint256 initialBalance = IERC20(otherToken).balanceOf(address(this));
         IERC20(otherToken).safeTransferFrom(msg.sender, feeAddress, amountIn * stakeNodeRatio/FEE_RATE_BASE);
-        IERC20(otherToken).safeTransferFrom(msg.sender, address(this), amountIn - amountIn * stakeNodeRatio/FEE_RATE_BASE);
-        uint256 newAmountIn = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance);
+        IERC20(otherToken).safeTransferFrom(msg.sender, deadAddress, amountIn/2);
+        IERC20(otherToken).safeTransferFrom(msg.sender, address(this), amountIn/2 - amountIn * stakeNodeRatio/FEE_RATE_BASE);
+        uint256 newAmountIn = IERC20(otherToken).balanceOf(address(this)).sub(initialBalance) ;
         ISwapRouter(router).swapExactTokensForTokensSupportingFeeOnTransferTokens(
             newAmountIn, amountOutMin, path, to, block.timestamp + 300);
-
         uint256 price = _getTokenPrice();
         uint256 amount = newAmountIn * price * 45 / 10**20;
         _hashUpdate(msg.sender,amount);
